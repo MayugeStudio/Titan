@@ -1,45 +1,44 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define ASSERT(expr) assert(expr)
 
-#define INITIAL_LINES 10
-
-enum TokenType {
-    SEMI,
-    OPEN_PAREN,
-    CLOSE_PAREN,
-};
-
-enum Keyword {
-    KEY_WORD_PROC,
-};
-
-enum Literal {
-    LITERAL_TEXT,
-};
-
 struct Program {
     char *content;
+    size_t content_size;
 };
-void lexer(FILE *file);
 
-void lexer(FILE *file, struct Program *content)
+void titan_load_program(FILE *file, struct Program *p);
+
+void titan_load_program(FILE *file, struct Program *p)
 {
-    size_t allocated = INITIAL_LINES;
+    char line[256];
 
-    Program->content = malloc(allocated * sizeof(char*));
-    if (Program->content == NULL)
-    {
+    while (fgets(line, sizeof(line), file)) {
+        size_t len = strlen(line);
         
-    }
+        // Remove newline character
+        if (line[len - 1] == '\n') {
+            line[len - 1] = '\0';
+            len--;
+        }
+        
+        // Reallocate memory for content
+        char *new_content = realloc(p->content, p->content_size + len + 1);
+        if (new_content == NULL) {
+            fprintf(stderr, "ERROR: faild to allocate memory");
+            free(p->content);
+            fclose(file);
+            return;
+        }
+        p->content = new_content;
 
-    char current = fgetc(file);
-    while (current != EOF)
-    {
-        printf("%c", current);
-        current = fgetc(file);
+        // Append p->content to line
+        strcpy(p->content + p->content_size, line);
+        // Update p->content_size
+        p->content_size += len;
     }
 }
 
@@ -57,22 +56,32 @@ static char* shift_args(int *argc, char ***argv)
     return result;
 }
 
+struct Program program = { 0 };
+
 int main(int argc, char** argv)
 {
     char *program_name = shift_args(&argc, &argv);
 
-    if (argc <= 0)
-    {
+    if (argc <= 0) {
         usage(stderr, program_name);
-        fprintf(stderr, "not enough arguments");
+        fprintf(stderr, "ERROR: Not enough arguments were provided\n");
         return -1;
     }
 
     char *fp = shift_args(&argc, &argv);
 
     FILE *file = fopen(fp, "r");
-    lexer(file);
+    if (file == NULL) {
+        fprintf(stderr, "ERROR: Could not open file %s\n", fp);
+        return -1;
+    }
+
+    titan_load_program(file, &program);
+
+    printf("%s\n", program.content);
+
     fclose(file);
+    free(program.content);
     return 0;
 }
 
